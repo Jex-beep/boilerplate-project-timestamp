@@ -1,84 +1,69 @@
-// Timestamp Microservice - server.js
-// Node + Express implementation that satisfies FreeCodeCamp Timestamp Microservice tests.
-// To use:
-// 1. Create folder, put this file as server.js
-// 2. npm init -y
-// 3. npm install express cors
-// 4. Start: node server.js (or set PORT env var for deployment)
+// index.js
+// where your node app starts
 
-const express = require('express');
-const cors = require('cors');
+// init project
+var express = require('express');
+var app = express();
 
-const app = express();
-app.use(cors());
+// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
+// so that your API is remotely testable by FCC 
+var cors = require('cors');
+app.use(cors({ optionsSuccessStatus: 200 }));  // some legacy browsers choke on 204
+
+// http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
 
-// Root -- optional: serves a simple message (you can replace with your index.html)
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+// http://expressjs.com/en/starter/basic-routing.html
+app.get("/", function (req, res) {
+  res.sendFile(__dirname + '/views/index.html');
 });
 
-// API endpoint
-app.get('/api/:date?', (req, res) => {
-  const { date } = req.params;
-
-  // If no date param, return current time
-  if (!date) {
-    const now = new Date();
-    return res.json({ unix: now.getTime(), utc: now.toUTCString() });
-  }
-
-  // If date consists only of digits, treat as milliseconds timestamp
-  // (Some test harnesses provide a numeric string like "1451001600000")
-  const onlyDigits = /^\d+$/;
-
-  let dateObj;
-  if (onlyDigits.test(date)) {
-    // parse as integer (milliseconds)
-    const parsed = Number(date);
-    dateObj = new Date(parsed);
-  } else {
-    // parse as date string
-    dateObj = new Date(date);
-  }
-
-  // Validate
-  if (dateObj.toString() === 'Invalid Date') {
-    return res.json({ error: 'Invalid Date' });
-  }
-
-  res.json({ unix: dateObj.getTime(), utc: dateObj.toUTCString() });
+// your first API endpoint... 
+app.get("/api/hello", function (req, res) {
+  res.json({ greeting: 'hello API' });
 });
 
-// Start server
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Timestamp Microservice listening on port ${port}`);
+// =========================
+// Timestamp API Endpoint
+// =========================
+app.get("/api/:date?", (req, res) => {
+  const dateParam = req.params.date;
+
+  let date;
+
+  // Case 1: No date provided → current date
+  if (!dateParam) {
+    date = new Date();
+  }
+  // Case 2: Numeric input → treat as timestamp
+  else if (/^\d+$/.test(dateParam)) {
+    let ms = Number(dateParam);
+
+    // If input is seconds (10 digits) → convert to ms
+    if (dateParam.length === 10) {
+      ms = ms * 1000;
+    }
+
+    date = new Date(ms);
+  }
+  // Case 3: Date string
+  else {
+    date = new Date(dateParam);
+  }
+
+  // Invalid date check
+  if (date.toString() === "Invalid Date") {
+    return res.json({ error: "Invalid Date" });
+  }
+
+  // Valid date response
+  return res.json({
+    unix: date.getTime(),      // milliseconds (✅ FCC expects this)
+    utc: date.toUTCString(),   // correct UTC format
+  });
 });
 
-/*
-Optional package.json (if you want to copy/paste):
-{
-  "name": "timestamp-microservice",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
-  }
-}
-
-Notes / Edge cases handled:
-- Numeric-only input is treated as milliseconds (as required by the tests). Example: /api/1451001600000
-- ISO date strings (e.g. 2015-12-25) are parsed by new Date(date_string).
-- Invalid parsed Date responds with { error: "Invalid Date" }.
-- No date param returns the current time in both unix (ms) and utc string.
-
-Testing examples:
-- GET /api/2015-12-25  => { unix: 1451001600000, utc: "Fri, 25 Dec 2015 00:00:00 GMT" }
-- GET /api/1451001600000 => { unix: 1451001600000, utc: "Fri, 25 Dec 2015 00:00:00 GMT" }
-- GET /api/foo => { error: "Invalid Date" }
-*/
+// Listen on port set in environment variable or default to 3000
+var listener = app.listen(process.env.PORT || 3000, function () {
+  console.log('Your app is listening on port ' + listener.address().port);
+});
