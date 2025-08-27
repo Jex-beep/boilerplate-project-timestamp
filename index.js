@@ -8,7 +8,7 @@ var app = express();
 // enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
 // so that your API is remotely testable by FCC 
 var cors = require('cors');
-app.use(cors({optionsSuccessStatus: 200}));  // some legacy browsers choke on 204
+app.use(cors({ optionsSuccessStatus: 200 }));  // some legacy browsers choke on 204
 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
@@ -20,49 +20,46 @@ app.get("/", function (req, res) {
 
 // your first API endpoint... 
 app.get("/api/hello", function (req, res) {
-  res.json({greeting: 'hello API'});
+  res.json({ greeting: 'hello API' });
 });
 
 // =========================
 // Timestamp API Endpoint
 // =========================
 app.get("/api/:date?", (req, res) => {
-  let dateString = req.params.date;
+  const dateParam = req.params.date;
 
-  // If no date is provided → current date
-  if (!dateString) {
-    let now = new Date();
-    return res.json({
-      unix: Math.floor(now.getTime() / 1000),
-      utc: now.toUTCString(),
-    });
+  let date;
+
+  // Case 1: No date provided → current date
+  if (!dateParam) {
+    date = new Date();
   }
+  // Case 2: Numeric input → treat as timestamp
+  else if (/^\d+$/.test(dateParam)) {
+    let ms = Number(dateParam);
 
-  // If input is numbers → treat as unix timestamp
-  if (/^\d+$/.test(dateString)) {
-    let timestamp = parseInt(dateString);
-
-    // If it's in seconds (10 digits) → convert to ms
-    if (dateString.length === 10) {
-      timestamp *= 1000;
+    // If input is seconds (10 digits) → convert to ms
+    if (dateParam.length === 10) {
+      ms = ms * 1000;
     }
 
-    let date = new Date(timestamp);
-    return res.json({
-      unix: Math.floor(date.getTime() / 1000),
-      utc: date.toUTCString(),
-    });
+    date = new Date(ms);
+  }
+  // Case 3: Date string
+  else {
+    date = new Date(dateParam);
   }
 
-  // Otherwise → try parsing as a date string
-  let date = new Date(dateString);
+  // Invalid date check
   if (date.toString() === "Invalid Date") {
     return res.json({ error: "Invalid Date" });
   }
 
+  // Valid date response
   return res.json({
-    unix: Math.floor(date.getTime() / 1000),
-    utc: date.toUTCString(),
+    unix: date.getTime(),      // milliseconds (✅ FCC expects this)
+    utc: date.toUTCString(),   // correct UTC format
   });
 });
 
@@ -70,4 +67,3 @@ app.get("/api/:date?", (req, res) => {
 var listener = app.listen(process.env.PORT || 3000, function () {
   console.log('Your app is listening on port ' + listener.address().port);
 });
-// hey
